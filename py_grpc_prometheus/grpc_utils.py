@@ -37,7 +37,10 @@ def split_method_call(handler_call_details):
     """
 
     # e.g. /package.ServiceName/MethodName
-    parts = handler_call_details.method.split("/")
+    method = handler_call_details.method
+    if isinstance(method, bytes):
+        method = method.decode()
+    parts = method.split("/")
     if len(parts) < 3:
         return "", "", False
 
