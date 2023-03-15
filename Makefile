@@ -2,8 +2,7 @@
 
 # Initialize the project development environment.
 initialize-development:
-	@pip install --upgrade -r requirements.txt
-	@pip install -U -r test_requirements.txt
+	@poetry install --sync
 	@pre-commit install
 
 .PHONY: test
@@ -20,14 +19,14 @@ run-test:
 
 # Fix the import path. Use pipe for sed to avoid the difference between Mac and GNU sed
 compile-protos:
-	@docker run --rm -v $(PWD):$(PWD) -w $(PWD) znly/protoc \
+	@python -m grpc_tools.protoc \
 	  --python_out=tests/integration//hello_world \
 	  -I tests/integration/protos \
 	  tests/integration/protos/*.proto
-	@docker run --rm -v $(PWD):$(PWD) -w $(PWD) znly/protoc \
+	@python -m grpc_tools.protoc \
       --plugin=protoc-gen-grpc=/usr/bin/grpc_python_plugin \
       --python_out=tests/integration//hello_world  \
-      --grpc_out=tests/integration//hello_world  \
+      --grpc_python_out=tests/integration//hello_world  \
       -I tests/integration/protos \
       tests/integration/protos/*.proto
 

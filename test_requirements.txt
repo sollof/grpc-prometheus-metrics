@@ -1,6 +1,0 @@
-pylint
-pre-commit
-protobuf
-pytest
-requests
-coverage
