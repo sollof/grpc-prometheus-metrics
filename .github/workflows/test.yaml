@@ -20,5 +20,5 @@ jobs:
           pip install -r requirements.txt
           pip install -r test_requirements.txt
       - run: |-
-          coverage run --source=py_grpc_prometheus -m pytest
+          coverage run --source=grpc_prometheus_metrics -m pytest
           coverage report -m

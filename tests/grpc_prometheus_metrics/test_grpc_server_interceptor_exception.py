@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 import grpc
 
-from tests.py_grpc_prometheus.utils import get_server_metric
+from tests.grpc_prometheus_metrics.utils import get_server_metric
 from tests.integration.hello_world import hello_world_pb2
 
 
@@ -37,7 +37,7 @@ def test_grpc_server_handled_with_interceptor_error(
 ):  # pylint: disable=unused-argument
     for _ in range(target_count):
         with patch(
-            'py_grpc_prometheus.prometheus_server_interceptor.'
+            'grpc_prometheus_metrics.prometheus_server_interceptor.'
             'PromServerInterceptor._compute_status_code',
             side_effect=Exception('mocked error'),
         ):
@@ -63,7 +63,7 @@ def test_grpc_server_handled_with_interceptor_error_and_skip_exceptions(
 ):  # pylint: disable=unused-argument
     for _ in range(target_count):
         with patch(
-            'py_grpc_prometheus.prometheus_server_interceptor.'
+            'grpc_prometheus_metrics.prometheus_server_interceptor.'
             'PromServerInterceptor._compute_status_code',
             side_effect=Exception('mocked error'),
         ):
@@ -82,7 +82,7 @@ def test_grpc_server_handled_before_request_error(
 ):  # pylint: disable=unused-argument
     for _ in range(target_count):
         with patch(
-            'py_grpc_prometheus.grpc_utils.wrap_iterator_inc_counter',
+            'grpc_prometheus_metrics.grpc_utils.wrap_iterator_inc_counter',
             side_effect=Exception('mocked error'),
         ):
             assert (

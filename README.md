@@ -1,4 +1,6 @@
-# py-grpc-prometheus
+# grpc-prometheus-metrics
+
+Fork of py-grpc-prometheus: https://github.com/lchenn/py-grpc-prometheus
 
 Instrument library to provide prometheus metrics similar to:
 
@@ -36,7 +38,7 @@ Client metrics monitoring is done by intercepting the gPRC channel.
 
 ```python
 import grpc
-from py_grpc_prometheus.prometheus_client_interceptor import PromClientInterceptor
+from grpc_prometheus_metrics.prometheus_client_interceptor import PromClientInterceptor
 
 channel = grpc.intercept_channel(grpc.insecure_channel('server:6565'),
                                          PromClientInterceptor())
@@ -51,7 +53,7 @@ Server metrics are exposed by adding the interceptor when the gRPC server is sta
 ```python
 import grpc
 from concurrent import futures
-from py_grpc_prometheus.prometheus_server_interceptor import PromServerInterceptor
+from grpc_prometheus_metrics.prometheus_server_interceptor import PromServerInterceptor
 from prometheus_client import start_http_server
 ```
 

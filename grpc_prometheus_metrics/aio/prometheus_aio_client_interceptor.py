@@ -5,15 +5,15 @@ from timeit import default_timer
 import grpc
 from prometheus_client.registry import REGISTRY
 
-from py_grpc_prometheus import grpc_utils
-from py_grpc_prometheus.client_metrics import init_metrics
+from grpc_prometheus_metrics import grpc_utils
+from grpc_prometheus_metrics.client_metrics import init_metrics
 
 
-class PromClientInterceptor(
-    grpc.UnaryUnaryClientInterceptor,
-    grpc.UnaryStreamClientInterceptor,
-    grpc.StreamUnaryClientInterceptor,
-    grpc.StreamStreamClientInterceptor,
+class PromAioClientInterceptor(
+    grpc.aio.UnaryUnaryClientInterceptor,
+    grpc.aio.UnaryStreamClientInterceptor,
+    grpc.aio.StreamUnaryClientInterceptor,
+    grpc.aio.StreamStreamClientInterceptor,
 ):
     """
     Intercept gRPC client requests.
@@ -35,7 +35,7 @@ class PromClientInterceptor(
         self._legacy = legacy
         self._metrics = init_metrics(registry)
 
-    def intercept_unary_unary(self, continuation, client_call_details, request):
+    async def intercept_unary_unary(self, continuation, client_call_details, request):
         grpc_service_name, grpc_method_name, _ = grpc_utils.split_method_call(client_call_details)
         grpc_type = grpc_utils.UNARY
 
@@ -44,7 +44,7 @@ class PromClientInterceptor(
         ).inc()
 
         start = default_timer()
-        handler = continuation(client_call_details, request)
+        handler = await continuation(client_call_details, request)
         if self._legacy:
             self._metrics["legacy_grpc_client_completed_latency_seconds_histogram"].labels(
                 grpc_type=grpc_type, grpc_service=grpc_service_name, grpc_method=grpc_method_name
@@ -54,24 +54,25 @@ class PromClientInterceptor(
                 grpc_type=grpc_type, grpc_service=grpc_service_name, grpc_method=grpc_method_name
             ).observe(max(default_timer() - start, 0))
 
+        code = await handler.code()
         if self._legacy:
             self._metrics["legacy_grpc_client_completed_counter"].labels(
                 grpc_type=grpc_type,
                 grpc_service=grpc_service_name,
                 grpc_method=grpc_method_name,
-                code=handler.code().name,
+                code=code.name,
             ).inc()
         else:
             self._metrics["grpc_client_handled_counter"].labels(
                 grpc_type=grpc_type,
                 grpc_service=grpc_service_name,
                 grpc_method=grpc_method_name,
-                grpc_code=handler.code().name,
+                grpc_code=code.name,
             ).inc()
 
         return handler
 
-    def intercept_unary_stream(self, continuation, client_call_details, request):
+    async def intercept_unary_stream(self, continuation, client_call_details, request):
         grpc_service_name, grpc_method_name, _ = grpc_utils.split_method_call(client_call_details)
         grpc_type = grpc_utils.SERVER_STREAMING
 
@@ -80,7 +81,7 @@ class PromClientInterceptor(
         ).inc()
 
         start = default_timer()
-        handler = continuation(client_call_details, request)
+        handler = await continuation(client_call_details, request)
         if self._legacy:
             self._metrics["legacy_grpc_client_completed_latency_seconds_histogram"].labels(
                 grpc_type=grpc_type, grpc_service=grpc_service_name, grpc_method=grpc_method_name
@@ -106,7 +107,7 @@ class PromClientInterceptor(
 
         return handler
 
-    def intercept_stream_unary(self, continuation, client_call_details, request_iterator):
+    async def intercept_stream_unary(self, continuation, client_call_details, request_iterator):
         grpc_service_name, grpc_method_name, _ = grpc_utils.split_method_call(client_call_details)
         grpc_type = grpc_utils.CLIENT_STREAMING
 
@@ -117,7 +118,7 @@ class PromClientInterceptor(
         )
 
         start = default_timer()
-        handler = continuation(client_call_details, request_iterator)
+        handler = await continuation(client_call_details, request_iterator)
 
         if self._legacy:
             self._metrics["grpc_client_started_counter"].labels(
@@ -144,14 +145,14 @@ class PromClientInterceptor(
 
         return handler
 
-    def intercept_stream_stream(self, continuation, client_call_details, request_iterator):
+    async def intercept_stream_stream(self, continuation, client_call_details, request_iterator):
         grpc_service_name, grpc_method_name, _ = grpc_utils.split_method_call(client_call_details)
         grpc_type = grpc_utils.BIDI_STREAMING
         start = default_timer()
 
         iterator_sent_metric = self._metrics["grpc_client_stream_msg_sent"]
 
-        response_iterator = continuation(
+        response_iterator = await continuation(
             client_call_details,
             grpc_utils.wrap_iterator_inc_counter(
                 request_iterator,

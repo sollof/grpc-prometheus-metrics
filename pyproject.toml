@@ -1,10 +1,11 @@
 [tool.poetry]
-name = "py-grpc-prometheus"
-version = "0.7.0"
-description = "Python gRPC Prometheus Interceptors"
-authors = ["Lin Chen <linchen04@gmail.com>"]
+name = "grpc-prometheus-metrics"
+version = "0.0.1"
+description = "Python gRPC Prometheus Interceptors, py-grpc-prometheus fork"
+authors = ["Sergio Soldatov <soldatovsr97@gmail.com>", "Lin Chen <linchen04@gmail.com>"]
 readme = "README.md"
-packages = [{include = "py_grpc_prometheus"}]
+license = "Apache-2.0"
+packages = [{include = "grpc_prometheus_metrics"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"

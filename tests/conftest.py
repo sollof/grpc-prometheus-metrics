@@ -5,8 +5,8 @@ import pytest
 import grpc
 from prometheus_client import exposition, registry
 
-from py_grpc_prometheus.prometheus_client_interceptor import PromClientInterceptor
-from py_grpc_prometheus.prometheus_server_interceptor import PromServerInterceptor
+from grpc_prometheus_metrics.prometheus_client_interceptor import PromClientInterceptor
+from grpc_prometheus_metrics.prometheus_server_interceptor import PromServerInterceptor
 from tests.integration.hello_world import hello_world_pb2_grpc as hello_world_grpc
 from tests.integration.hello_world.hello_world_server import Greeter
 from tests.integration.hello_world import hello_world_pb2

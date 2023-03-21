@@ -2,25 +2,18 @@
 import logging
 
 from timeit import default_timer
-from typing import Awaitable, Callable
 
-from grpc.aio._interceptor import ServerInterceptor
 import grpc
 from prometheus_client.registry import REGISTRY
 
-from py_grpc_prometheus import grpc_utils  # type: ignore
-from py_grpc_prometheus import server_metrics  # type: ignore
+from grpc_prometheus_metrics import grpc_utils
+from grpc_prometheus_metrics import server_metrics
 
 
 _LOGGER = logging.getLogger(__name__)
 
 
-# We were forced to write this class because
-#   https://github.com/lchenn/py-grpc-prometheus/issues/13
-# This file is an almost complete copy of py_grpc_prometheus.PromServerInterceptor
-# For information:
-#   https://stackoverflow.com/questions/64192211/how-to-convert-grpc-serverinterceptor-to-grcp-aio-serverinterceptor
-class PromAioServerInterceptor(ServerInterceptor):
+class PromServerInterceptor(grpc.ServerInterceptor):
     def __init__(
         self,
         enable_handling_time_histogram=False,
@@ -28,7 +21,7 @@ class PromAioServerInterceptor(ServerInterceptor):
         skip_exceptions=False,
         log_exceptions=True,
         registry=REGISTRY,
-    ) -> None:
+    ):
         self._enable_handling_time_histogram = enable_handling_time_histogram
         self._legacy = legacy
         self._grpc_server_handled_total_counter = server_metrics.get_grpc_server_handled_counter(
@@ -38,15 +31,7 @@ class PromAioServerInterceptor(ServerInterceptor):
         self._skip_exceptions = skip_exceptions
         self._log_exceptions = log_exceptions
 
-        # This is a constraint of current grpc.StatusCode design
-        # https://groups.google.com/g/grpc-io/c/EdIXjMEaOyw/m/d3DeqmrJAAAJ
-        self._code_to_status_mapping = {x.value[0]: x for x in grpc.StatusCode}
-
-    async def intercept_service(
-        self,
-        continuation: Callable[[grpc.HandlerCallDetails], Awaitable[grpc.RpcMethodHandler]],
-        handler_call_details: grpc.HandlerCallDetails,
-    ) -> grpc.RpcMethodHandler:
+    def intercept_service(self, continuation, handler_call_details):
         """
         Intercepts the server function calls.
 
@@ -60,7 +45,7 @@ class PromAioServerInterceptor(ServerInterceptor):
         grpc_service_name, grpc_method_name, _ = grpc_utils.split_method_call(handler_call_details)
 
         def metrics_wrapper(behavior, request_streaming, response_streaming):
-            async def new_behavior(request_or_iterator, servicer_context):
+            def new_behavior(request_or_iterator, servicer_context):
                 response_or_iterator = None
                 try:
                     start = default_timer()
@@ -82,7 +67,7 @@ class PromAioServerInterceptor(ServerInterceptor):
                             ).inc()
 
                         # Invoke the original rpc behavior.
-                        response_or_iterator = await behavior(request_or_iterator, servicer_context)
+                        response_or_iterator = behavior(request_or_iterator, servicer_context)
 
                         if response_streaming:
                             sent_metric = self._metrics["grpc_server_stream_msg_sent"]
@@ -141,22 +126,22 @@ class PromAioServerInterceptor(ServerInterceptor):
 
             return new_behavior
 
-        handler = await continuation(handler_call_details)
-        optional_any = self._wrap_rpc_behavior(handler, metrics_wrapper)
+        optional_any = self._wrap_rpc_behavior(continuation(handler_call_details), metrics_wrapper)
 
         return optional_any
 
+    # pylint: disable=protected-access
     def _compute_status_code(self, servicer_context):
-        if servicer_context.cancelled():
+        if servicer_context._state.client == "cancelled":
             return grpc.StatusCode.CANCELLED
 
-        if servicer_context.code() is None:
+        if servicer_context._state.code is None:
             return grpc.StatusCode.OK
 
-        return self._code_to_status_mapping[servicer_context.code()]
+        return servicer_context._state.code
 
     def _compute_error_code(self, grpc_exception):
-        if isinstance(grpc_exception, grpc.aio.Call):
+        if isinstance(grpc_exception, grpc.Call):
             return grpc_exception.code()
 
         return grpc.StatusCode.UNKNOWN

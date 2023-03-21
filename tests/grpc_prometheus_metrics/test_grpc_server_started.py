@@ -1,6 +1,6 @@
 import pytest
 
-from tests.py_grpc_prometheus.utils import get_server_metric
+from tests.grpc_prometheus_metrics.utils import get_server_metric
 from tests.integration.hello_world import hello_world_pb2
 
 
