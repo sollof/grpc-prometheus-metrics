@@ -1,9 +1,11 @@
 ---
 language: python
 python:
-  - "3.6"
+  - "3.10"
 install:
-  - "pip install -r requirements.txt"
+  - "pip install --upgrade pip"
+  - "pip install poetry"
+  - "poetry install"
   - "pip install pylint"
 script:
   - "make pre-commit run-test"

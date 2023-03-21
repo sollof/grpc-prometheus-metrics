@@ -16,9 +16,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      - run: |-
-          pip install -r requirements.txt
-          pip install -r test_requirements.txt
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install poetry
+          poetry install
       - run: |-
           coverage run --source=grpc_prometheus_metrics -m pytest
           coverage report -m
