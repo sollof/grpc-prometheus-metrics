@@ -2,8 +2,15 @@ from prometheus_client import Counter
 from prometheus_client import Histogram
 
 
+__METRICS = None
+
+
 def init_metrics(registry):
-    return {
+    global __METRICS
+    if __METRICS is not None:
+        return __METRICS
+
+    __METRICS = {
         "grpc_client_started_counter": Counter(
             "grpc_client_started_total",
             "Total number of RPCs started on the client",
@@ -30,8 +37,7 @@ def init_metrics(registry):
         ),
         "grpc_client_handled_histogram": Histogram(
             "grpc_client_handling_seconds",
-            "Histogram of response latency (seconds) of the gRPC until"
-            "it is finished by the application.",
+            "Histogram of response latency (seconds) of the gRPC until" "it is finished by the application.",
             ["grpc_type", "grpc_service", "grpc_method"],
             registry=registry,
         ),
@@ -61,3 +67,4 @@ def init_metrics(registry):
             registry=registry,
         ),
     }
+    return __METRICS
