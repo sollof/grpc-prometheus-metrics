@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "grpc-prometheus-metrics"
-version = "0.0.1"
+version = "0.0.2"
 description = "Python gRPC Prometheus Interceptors, py-grpc-prometheus fork"
 authors = ["Sergio Soldatov <soldatovsr97@gmail.com>", "Lin Chen <linchen04@gmail.com>"]
 readme = "README.md"
