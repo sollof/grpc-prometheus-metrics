@@ -9,10 +9,7 @@ from prometheus_client import start_http_server
 
 import tests.integration.hello_world.hello_world_pb2 as hello_world_pb2
 import tests.integration.hello_world.hello_world_pb2_grpc as hello_world_grpc
-from grpc_prometheus_metrics.aio.prometheus_aio_client_interceptor import PromAioClientInterceptor
-from grpc_prometheus_metrics.aio.prometheus_aio_client_interceptor import PromAioStreamStreamClientInterceptor
-from grpc_prometheus_metrics.aio.prometheus_aio_client_interceptor import PromAioUnaryStreamClientInterceptor
-from grpc_prometheus_metrics.aio.prometheus_aio_client_interceptor import PromAioStreamUnaryClientInterceptor
+from grpc_prometheus_metrics.aio.prometheus_aio_client_interceptor import PromAioUnaryUnaryClientInterceptor
 
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
@@ -21,10 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def call_server():
     channel = insecure_channel("localhost:50051", interceptors=[
-        PromAioClientInterceptor(enable_client_handling_time_histogram=True),
-        PromAioUnaryStreamClientInterceptor(enable_client_handling_time_histogram=True),
-        PromAioStreamUnaryClientInterceptor(enable_client_handling_time_histogram=True),
-        PromAioStreamStreamClientInterceptor(enable_client_handling_time_histogram=True)
+        PromAioUnaryUnaryClientInterceptor(enable_client_handling_time_histogram=True)
     ])
     stub = hello_world_grpc.GreeterStub(channel)
 
@@ -38,36 +32,6 @@ async def call_server():
         except grpc.RpcError:
             _LOGGER.error("Got an exception from server")
     _LOGGER.info("")
-
-    # Call the unary stream.
-    _LOGGER.info("Running Unary Stream async client")
-    _LOGGER.info("Response for Unary Stream")
-    request = hello_world_pb2.MultipleHelloResRequest(name="unary stream", res=5)
-    stream = stub.SayHelloUnaryStream(request)
-    async for response in stream:
-        _LOGGER.info("Unary Stream response item: %s", response.message)
-    _LOGGER.info("")
-
-    # Call the stream_unary.
-    try:
-        _LOGGER.info("Running Stream Unary async client")
-        response = await stub.SayHelloStreamUnary(generate_requests("Stream Unary"))
-        _LOGGER.info("Stream Unary response: %s", response.message)
-        _LOGGER.info("")
-    except grpc.RpcError:
-        _LOGGER.error("Got an exception from server")
-
-    # Call stream & stream.
-    _LOGGER.info("Running Bidi Stream async client")
-    stream = stub.SayHelloBidiStream(generate_requests("Bidi Stream"))
-    async for response in stream:
-        _LOGGER.info("Bidi Stream response item: %s", response.message)
-    _LOGGER.info("")
-
-
-def generate_requests(name):
-    for i in range(10):
-        yield hello_world_pb2.HelloRequest(name="%s %s" % (name, i))
 
 
 def run():
