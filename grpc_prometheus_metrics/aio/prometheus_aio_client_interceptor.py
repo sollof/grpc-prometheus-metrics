@@ -33,31 +33,38 @@ class PromAioUnaryUnaryClientInterceptor(grpc.aio.UnaryUnaryClientInterceptor):
         ).inc()
 
         start = default_timer()
-        handler = await continuation(client_call_details, request)
-        code = await handler.code()
+        try:
+            handler = await continuation(client_call_details, request)
+            code = await handler.code()
+        except grpc.aio.AioRpcError as exc:
+            code = exc.code()
+            raise exc
+        finally:
+            if self._legacy:
+                self._metrics["legacy_grpc_client_completed_latency_seconds_histogram"].labels(
+                    grpc_type=grpc_type,
+                    grpc_service=grpc_service_name,
+                    grpc_method=grpc_method_name,
+                ).observe(max(default_timer() - start, 0))
+            elif self._enable_client_handling_time_histogram:
+                self._metrics["grpc_client_handled_histogram"].labels(
+                    grpc_type=grpc_type,
+                    grpc_service=grpc_service_name,
+                    grpc_method=grpc_method_name,
+                ).observe(max(default_timer() - start, 0))
 
-        if self._legacy:
-            self._metrics["legacy_grpc_client_completed_latency_seconds_histogram"].labels(
-                grpc_type=grpc_type, grpc_service=grpc_service_name, grpc_method=grpc_method_name
-            ).observe(max(default_timer() - start, 0))
-        elif self._enable_client_handling_time_histogram:
-            self._metrics["grpc_client_handled_histogram"].labels(
-                grpc_type=grpc_type, grpc_service=grpc_service_name, grpc_method=grpc_method_name
-            ).observe(max(default_timer() - start, 0))
-
-        if self._legacy:
-            self._metrics["legacy_grpc_client_completed_counter"].labels(
-                grpc_type=grpc_type,
-                grpc_service=grpc_service_name,
-                grpc_method=grpc_method_name,
-                code=code.name,
-            ).inc()
-        else:
-            self._metrics["grpc_client_handled_counter"].labels(
-                grpc_type=grpc_type,
-                grpc_service=grpc_service_name,
-                grpc_method=grpc_method_name,
-                grpc_code=code.name,
-            ).inc()
-
+            if self._legacy:
+                self._metrics["legacy_grpc_client_completed_counter"].labels(
+                    grpc_type=grpc_type,
+                    grpc_service=grpc_service_name,
+                    grpc_method=grpc_method_name,
+                    code=code.name,
+                ).inc()
+            else:
+                self._metrics["grpc_client_handled_counter"].labels(
+                    grpc_type=grpc_type,
+                    grpc_service=grpc_service_name,
+                    grpc_method=grpc_method_name,
+                    grpc_code=code.name,
+                ).inc()
         return handler
