@@ -28,6 +28,7 @@ class PromAioServerInterceptor(ServerInterceptor):
         skip_exceptions=False,
         log_exceptions=True,
         registry=REGISTRY,
+        unary_only=False,
     ) -> None:
         self._enable_handling_time_histogram = enable_handling_time_histogram
         self._legacy = legacy
@@ -37,6 +38,7 @@ class PromAioServerInterceptor(ServerInterceptor):
         self._metrics = server_metrics.init_metrics(registry)
         self._skip_exceptions = skip_exceptions
         self._log_exceptions = log_exceptions
+        self._unary_only = unary_only
 
         # This is a constraint of current grpc.StatusCode design
         # https://groups.google.com/g/grpc-io/c/EdIXjMEaOyw/m/d3DeqmrJAAAJ
@@ -142,6 +144,12 @@ class PromAioServerInterceptor(ServerInterceptor):
             return new_behavior
 
         handler = await continuation(handler_call_details)
+        if (
+            self._unary_only
+            and handler
+            and (handler.request_streaming or handler.response_streaming)
+        ):
+            return handler
         optional_any = self._wrap_rpc_behavior(handler, metrics_wrapper)
 
         return optional_any
